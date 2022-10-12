@@ -10,6 +10,8 @@ import glob
 from tqdm import *
 from multiprocessing import Pool
 import scipy.signal as s
+from subprocess import check_output
+from dm_utils import get_dm
 from matplotlib import gridspec
 os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
 matplotlib.use('Agg')
@@ -31,6 +33,12 @@ def plot_h5(h5_file, show=False, save=True, detrend=True):
             to_print = []
             for key in f.attrs.keys():
                 to_print.append(f'{key} : {f.attrs[key]}\n')
+            src = f.attrs['source_name'].decode("utf-8")
+            try:
+                expected_dm = get_dm(src)
+            except:
+                print(f'did not get expected_dm from get_dm')
+            to_print.append(f'expected DM : {expected_dm}\n')
             str_print = ''.join(to_print)
             dm_time = np.array(f['data_dm_time'])
             if detrend:
