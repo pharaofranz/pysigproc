@@ -142,7 +142,8 @@ class Candidate(SigprocFile):
         self.dm_opt = -1
         self.snr_opt = -1
         self.kill_mask = kill_mask
-
+        self.fname = fp
+        
     def save_h5(self, out_dir=None, fnout=None):
         """
         Generates an h5 file of the candidate object
@@ -164,13 +165,20 @@ class Candidate(SigprocFile):
             f.attrs['snr_opt'] = self.snr_opt
             f.attrs['width'] = self.width
             f.attrs['label'] = self.label
+            f.attrs['rawdatafile'] = 'doof' #self.fname
 
             # Copy over header information as attributes
             for key in list(self._type.keys()):
                 if getattr(self, key) is not None:
-                    f.attrs[key] = getattr(self, key)
+                    if key == 'rawdatafile':
+                        f.attrs[key] = self.fname
+                    else:
+                        f.attrs[key] = getattr(self, key)
                 else:
-                    f.attrs[key] = b'None'
+                    if key == 'rawdatafile':
+                        f.attrs[key] = self.fname
+                    else:
+                        f.attrs[key] = b'None'
 
             freq_time_dset = f.create_dataset('data_freq_time', data=self.dedispersed, dtype=self.dedispersed.dtype,
                                               compression="lzf")
