@@ -144,7 +144,7 @@ def gpu_dedisp_and_dmt(cand, device=0):
     cuda.close()
 
 
-def gpu_dedisp_and_dmt_crop(cand, device=0):
+def gpu_dedisp_and_dmt_crop(cand, device=0, dm_range_scale=1.0):
     """
 
     :param cand: Candidate object
@@ -172,8 +172,9 @@ def gpu_dedisp_and_dmt_crop(cand, device=0):
                                                    dtype=np.float32, stream=stream)
     cand_dedispersed_out = cuda.device_array(shape=(int(cand.data.shape[1]/frequency_decimation_factor), 256), dtype=np.float32, stream=stream)
     dmt_return = cuda.device_array(shape=(256,256), dtype=np.float32, stream=stream)
-    dm_list = cuda.to_device(np.linspace(0, 2 * cand.dm, 256, dtype=np.float32), stream=stream)
-
+    range_dm = cand.dm * dm_range_scale
+    dm_list = cuda.to_device(np.linspace(cand.dm - range_dm, cand.dm + range_dm, 256, dtype=np.float32), stream=stream)
+    
     @cuda.jit
     def crop_time(data_in, data_out, side_stride):
         ii, jj = cuda.grid(2)
@@ -209,7 +210,8 @@ def gpu_dedisp_and_dmt_crop(cand, device=0):
     cand.dedispersed = cand_dedispersed_out.copy_to_host(stream=stream).T
 
     disp_time = np.zeros(shape=(cand_data_in.shape[0], 256), dtype=np.int)
-    for idx, dms in enumerate(np.linspace(0, 2 * cand.dm, 256)):
+    #for idx, dms in enumerate(np.linspace(0, 2 * cand.dm, 256)):
+    for idx, dms in enumerate(np.linspace(cand.dm - range_dm, cand.dm + range_dm, 256)):
         disp_time[:, idx] = np.round(
             -1 * 4148808.0 * dms * (1 / (cand.chan_freqs[0]) ** 2 - 1 / (cand.chan_freqs) ** 2) / 1000 / cand.tsamp)
 

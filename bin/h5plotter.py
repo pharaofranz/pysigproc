@@ -17,13 +17,14 @@ os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
 matplotlib.use('Agg')
 
 
-def plot_h5(h5_file, show=False, save=True, detrend=True):
+def plot_h5(h5_file, show=False, save=True, detrend=True, dm_range_scale=1.0):
     """
     Plot the h5 candidate file
     :param h5_file: Address of the candidate h5 file
     :param show: Argument to display the plot
     :param save: Argument to save the plot
     :param detrend: Optional argument to detrend the frequency-time array
+    :param dm_range_scale: Optional scaling factor to limit the dm-range in the plot.
     :return:
     """
     try:
@@ -33,7 +34,7 @@ def plot_h5(h5_file, show=False, save=True, detrend=True):
             to_print = []
             for key in f.attrs.keys():
                 to_print.append(f'{key} : {f.attrs[key]}\n')
-            src = f.attrs['source_name'].decode("utf-8")
+            src = f.attrs['source_name']#.decode("utf-8")
             try:
                 expected_dm = get_dm(src)
             except:
@@ -65,11 +66,22 @@ def plot_h5(h5_file, show=False, save=True, detrend=True):
                 ts = np.linspace(-128,128,256) * tsamp * width*1000 / 2
             else:
                 ts = np.linspace(-128,128,256) * tsamp* 1000
-            ax1.plot(ts, freq_time.sum(0), 'k-')
+
+            # make the bins square
+            ax1.plot(ts, freq_time.sum(0), color='k', drawstyle='steps-mid')
+
+            # Also fix that the time series is aligned on the x-axis with dynamic spectrum and DMT plot
+            ax1.set_xlim(ts[0], ts[-1])
+
             ax1.set_ylabel('Flux (Arb. Units)')
+
+            # plot dynamic spectrum
             ax2.imshow(freq_time, aspect='auto', extent=[ts[0], ts[-1], fch1, fch1 + (nchan * foff)], interpolation='none')
             ax2.set_ylabel('Frequency (MHz)')
-            ax3.imshow(dm_time, aspect='auto', extent=[ts[0], ts[-1], 2 * dm, 0], interpolation='none')
+
+            dmt_extent = [ts[0], ts[-1], dm + dm * dm_range_scale, dm - dm * dm_range_scale]
+
+            ax3.imshow(dm_time, aspect='auto', extent=dmt_extent, interpolation='none')
             ax3.set_ylabel(r'DM (pc cm$^{-3}$)')
             ax3.set_xlabel('Time (ms)')
             ax4.text(0.2, 0, str_print, fontsize=14, ha='left', va='bottom', wrap=True)
